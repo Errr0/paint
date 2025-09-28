@@ -1,86 +1,84 @@
 import pygame
+import sys
 
+# Stałe ekranu
+SCREEN_WIDTH = 540
+SCREEN_HEIGHT = 960
+
+# Inicjalizacja pygame
 pygame.init()
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Podział ekranu - opcje sterowania")
 
-# rozmiar "logicznego" canvasu (np. 64x64 piksele)
-GRID_SIZE = 64
-PIXEL_SIZE = 12  # jak bardzo powiększamy jeden piksel
+# Kolory
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (50, 150, 255)
+RED = (255, 100, 100)
+GREEN = (100, 255, 100)
 
-WIDTH, HEIGHT = GRID_SIZE * PIXEL_SIZE, GRID_SIZE * PIXEL_SIZE + 60
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Pixel Paint")
+# Pasek
+BAR_WIDTH = 80
+bar_on_left = True  # True = lewa strona, False = prawa
 
-# paleta kolorów (RGB)
-PALETTE = [
-    (0, 0, 0),       # czarny
-    (255, 255, 255), # biały
-    (255, 0, 0),     # czerwony
-    (0, 255, 0),     # zielony
-    (0, 0, 255),     # niebieski
-    (255, 0, 255),   # różowy
-    (0, 255, 255),   # cyjan
-    (255, 255, 0),   # żółty
-]
+# Czerwona część
+red_on_bottom = True  # True = dół, False = góra
 
-current_color = PALETTE[0]  # startowy kolor
+# Proporcje 9:16
+ASPECT_RATIO = 9 / 16
 
-# tablica canvasu
-canvas = [[(255, 255, 255) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+# Maksymalne FPS
+MAX_FPS = 60
+cap_fps = False
 
+# Pętla główna
+clock = pygame.time.Clock()
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+            elif event.key == pygame.K_z:  # zmiana strony paska
+                bar_on_left = not bar_on_left
+            elif event.key == pygame.K_c:  # zmiana pozycji czerwonego
+                red_on_bottom = not red_on_bottom
 
-def draw_canvas():
-    for y in range(GRID_SIZE):
-        for x in range(GRID_SIZE):
-            rect = (x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE)
-            pygame.draw.rect(WIN, canvas[y][x], rect)
+    # Tło
+    screen.fill(WHITE)
 
+    # --- NIEBIESKA CZĘŚĆ ---
+    blue_width = SCREEN_WIDTH - BAR_WIDTH
+    blue_height = int(blue_width / ASPECT_RATIO)
 
-def draw_palette():
-    for i, color in enumerate(PALETTE):
-        rect = (i * 50 + 10, HEIGHT - 50, 40, 40)
-        pygame.draw.rect(WIN, color, rect)
-        pygame.draw.rect(WIN, (0, 0, 0), rect, 2)  # obramowanie
+    # Pasek zielony
+    if bar_on_left:
+        bar_x = 0
+        blue_x = BAR_WIDTH
+    else:
+        bar_x = SCREEN_WIDTH - BAR_WIDTH
+        blue_x = 0
 
+    pygame.draw.rect(screen, GREEN, (bar_x, 0, BAR_WIDTH, SCREEN_HEIGHT))
+    pygame.draw.rect(screen, BLUE, (blue_x, 0, blue_width, blue_height))
 
-def get_palette_click(pos):
-    x, y = pos
-    if y >= HEIGHT - 50:
-        for i in range(len(PALETTE)):
-            rect = pygame.Rect(i * 50 + 10, HEIGHT - 50, 40, 40)
-            if rect.collidepoint(x, y):
-                return PALETTE[i]
-    return None
+    red_height = SCREEN_HEIGHT - blue_height
+    if red_height > 0:
+        if red_on_bottom:
+            red_y = blue_height
+        else:
+            red_y = 0
+            if bar_on_left:
+                pygame.draw.rect(screen, BLUE, (BAR_WIDTH, red_height, blue_width, blue_height))
+            else:
+                pygame.draw.rect(screen, BLUE, (0, red_height, blue_width, blue_height))
+        pygame.draw.rect(screen, RED, (0, red_y, SCREEN_WIDTH, red_height))
 
+    # Aktualizacja ekranu
+    pygame.display.flip()
+    if cap_fps: clock.tick(MAX_FPS)
 
-def main():
-    global current_color
-    run = True
-    clock = pygame.time.Clock()
-
-    while run:
-        clock.tick(60)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-
-            if pygame.mouse.get_pressed()[0]:  # lewy przycisk myszy
-                mx, my = pygame.mouse.get_pos()
-                if my < GRID_SIZE * PIXEL_SIZE:  # klik na canvasie
-                    gx, gy = mx // PIXEL_SIZE, my // PIXEL_SIZE
-                    if 0 <= gx < GRID_SIZE and 0 <= gy < GRID_SIZE:
-                        canvas[gy][gx] = current_color
-                else:  # klik na palecie
-                    color = get_palette_click((mx, my))
-                    if color:
-                        current_color = color
-
-        WIN.fill((200, 200, 200))
-        draw_canvas()
-        draw_palette()
-        pygame.display.flip()
-
-    pygame.quit()
-
-
-if __name__ == "__main__":
-    main()
+pygame.quit()
+sys.exit()
